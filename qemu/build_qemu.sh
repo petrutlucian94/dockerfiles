@@ -55,6 +55,7 @@ function git_clone_pull () {
 }
 
 function ensure_build_dir () {
+    mkdir -p $DATA_DIR
     if [ ! -z $(echo $QEMU_DEBUG | grep -i "y") ]; then
         QEMU_BUILD_DIR="$BUILD_TOP_DIR/debug"
     else
@@ -71,26 +72,25 @@ function configure_qemu () {
 
     QEMU_CONFIGURE_ARGS=()
     QEMU_CONFIGURE_ARGS+=("--target-list=$QEMU_TARGET_LIST")
-    QEMU_CONFIGURE_ARGS+=("--extra-cflags=$QEMU_EXTRA_CFLAGS")
     QEMU_CONFIGURE_ARGS+=($QEMU_CONFIGURE_EXTRA_ARGS)
 
-    local CROSS_PREFIX="" 
-    if [ ! -z $(echo $MINGW_BUILD | grep -i "y") ]; then
-        CROSS_PREFIX=x86_64-w64-mingw32-
-        # We'll enforce WHPX for Windows builds
-        QEMU_CONFIGURE_ARGS+=("--enable-whpx")
-        QEMU_EXTRA_CFLAGS="$QEMU_EXTRA_CFLAGS -I $WHP_INCLUDE"
-        QEMU_EXTRA_LDFLAGS="$QEMU_EXTRA_LDFLAGS -L $WHP_LIB"
-        QEMU_EXTRA_LDFLAGS="$QEMU_EXTRA_LDFLAGS -lWinHvPlatform -lWinHvEmulation"
-    fi
+    CROSS_PREFIX=x86_64-w64-mingw32-
+    # We'll enforce WHPX for Windows builds
+    QEMU_CONFIGURE_ARGS+=("--enable-whpx")
+    QEMU_EXTRA_CFLAGS="-I$WHP_INCLUDE $QEMU_EXTRA_CFLAGS"
+    QEMU_EXTRA_CFLAGS="-Wno-unknown-pragmas -Wno-undef $QEMU_EXTRA_CFLAGS"
+    QEMU_EXTRA_LDFLAGS="-L$WHP_LIB $QEMU_EXTRA_LDFLAGS"
 
     if [ ! -z $(echo $QEMU_DEBUG | grep -i "y") ]; then
         QEMU_CONFIGURE_ARGS+=("--enable-debug")
     fi
 
     QEMU_CONFIGURE_ARGS+=("--cross-prefix=$CROSS_PREFIX")
+    QEMU_CONFIGURE_ARGS+=("--extra-cflags=$QEMU_EXTRA_CFLAGS")
+    QEMU_CONFIGURE_ARGS+=("--extra-ldflags=$QEMU_EXTRA_LDFLAGS")
 
-    "$QEMU_SRC_DIR/configure" ${QEMU_CONFIGURE_ARGS[@]}
+    "$QEMU_SRC_DIR/configure" "${QEMU_CONFIGURE_ARGS[@]}" || \
+         ( tail -n 30 $QEMU_BUILD_DIR/config.log && exit 1 )
 
     popd
 }
@@ -98,12 +98,17 @@ function configure_qemu () {
 function build_qemu () {
     pushd $QEMU_BUILD_DIR
     make -j $MAKE_JOB_COUNT $QEMU_MAKE_EXTRA_ARGS
+    echo "Finished building QEMU. Destination: $QEMU_BUILD_DIR"
     popd
 }
 
 set -e
 
 git_clone_pull $QEMU_REPO_URL $QEMU_SRC_DIR $QEMU_BRANCH
+
+# windres segfault workaround
+sed -i -e 's/IDI_ICON1/\/\/ IDI_ICON1/g' $QEMU_SRC_DIR/version.rc
+
 configure_qemu
 build_qemu
 

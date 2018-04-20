@@ -1,46 +1,51 @@
-FROM ubuntu:16.04
-RUN echo "deb http://archive.ubuntu.com/ubuntu/ trusty universe multiverse" >> \
-    /etc/apt/sources.list
-RUN apt-get update
-ENV PACKAGES flex bison \
-    libusb-1.0-0-dev libiscsi-dev librados-dev libncurses5-dev libncursesw5-dev \
-    libseccomp-dev libgnutls-dev libssh2-1-dev  libspice-server-dev \
-    libspice-protocol-dev libnss3-dev libfdt-dev \
-    libgtk-3-dev libvte-2.91-dev libsdl1.2-dev libpng12-dev libpixman-1-dev \
-    libvdeplug-dev liblzo2-dev libsnappy-dev libbz2-dev libxen-dev librdmacm-dev libibverbs-dev \
-    libsasl2-dev libjpeg-turbo8-dev xfslibs-dev libcap-ng-dev libbrlapi-dev libcurl4-gnutls-dev \
-    libbluetooth-dev librbd-dev libaio-dev glusterfs-common libnuma-dev libepoxy-dev libdrm-dev libgbm-dev \
-    libjemalloc-dev libcacard-dev libusbredirhost-dev libnfs-dev libcap-dev libattr1-dev \
-    texinfo \
-    gettext git make ccache python-yaml gcc clang sparse
-RUN apt-get -y install $PACKAGES
-RUN dpkg -l $PACKAGES | sort > /packages.txt
-ENV FEATURES clang pyyaml
+FROM opensuse:leap
+RUN zypper repos | grep -q mingw || zypper -n addrepo \
+    "http://download.opensuse.org/repositories/windows:/mingw:/win64/openSUSE_Leap_42.3/" mingw
+RUN zypper --gpg-auto-import-keys refresh
 
-VOLUME /data
+ENV MINGW_PACKAGES \
+    mingw64-binutils mingw64-cpp mingw64-cross-binutils mingw64-cross-cpp \
+    mingw64-cross-gcc mingw64-cross-pkg-config mingw64-filesystem \
+    mingw64-gcc mingw64-glib2 mingw64-glib2-devel mingw64-glib2-lang \
+    mingw64-headers mingw64-libgcc mingw64-libgmp mingw64-libintl-devel \
+    mingw64-libmpc mingw64-libmpfr mingw64-libSDL2-devel  \
+    mingw64-libssp mingw64-runtime mingw64-zlib mingw64-zlib-devel mingw64-pixman-devel
+ENV EXTRA_PACKAGES \
+    binutils git make
+#     texinfo gettext ccache python-yaml sparse
+RUN zypper install -y $MINGW_PACKAGES $EXTRA_PACKAGES
+# ENV FEATURES clang pyyaml
 
-ENV QEMU_SRC_DIR "/data/qemu"
-ENV BUILD_TOP_DIR "/data/build"
+ENV DATA_DIR "/data"
+ENV LOCAL_DATA "/local_data"
+ENV QEMU_SRC_DIR "$DATA_DIR/qemu"
+ENV BUILD_TOP_DIR "$DATA_DIR/build"
 ENV QEMU_REPO_URL "https://github.com/qemu/qemu"
 ENV QEMU_BRANCH "master"
 ENV QEMU_TARGET_LIST "x86_64-softmmu"
 ENV QEMU_DEBUG "no"
-ENV MINGW_BUILD "yes"
 ENV QEMU_EXTRA_CFLAGS ""
+ENV QEMU_EXTRA_LDFLAGS ""
 ENV MAKE_JOB_COUNT "2"
-ENV WHP_INCLUDE "/data/whp_include"
-ENV WHP_LIB "/data/whp_lib"
+ENV WHP_INCLUDE "$LOCAL_DATA/whp_include"
+ENV WHP_LIB "$LOCAL_DATA/whp_lib"
 
 ENV QEMU_CONFIGURE_EXTRA_ARGS=""
 ENV QEMU_MAKE_EXTRA_ARGS=""
-# ENV QEMU_EXTRA_CLFAGS "Wno-missing-braces -Wno-aggressive-loop-optimizations"
+ENV QEMU_EXTRA_CLFAGS "-Wno-missing-braces -Wno-aggressive-loop-optimizations"
 
-RUN mkdir /scripts
+LABEL description="QEMU MINGW build image. Use this image to cross-compile \
+QEMU for Windows. \
+The QEMU repo clone as well as resulted builds will be stored at the path \
+pointed by the DATA_DIR environment variable. Optionally, this may point \
+to a mounted volume, which will speed up subsequent builds and simplify \
+retrieving the output binaries."
 
-COPY build_qemu.sh /scripts/
-COPY whp_include /data/
-COPY whp_lib /data/
+RUN mkdir -p $LOCAL_DATA/scripts
+COPY build_qemu.sh $LOCAL_DATA/scripts/
+COPY whp_include $LOCAL_DATA/whp_include
+COPY whp_lib $LOCAL_DATA/whp_lib
 
-RUN chmod a+x /scripts/build_qemu.sh 
+RUN chmod a+x $LOCAL_DATA/scripts/build_qemu.sh
 
-ENTRYPOINT /scripts/build_qemu.sh
+ENTRYPOINT $LOCAL_DATA/scripts/build_qemu.sh
