@@ -68,7 +68,6 @@ fi
 
 function ensure_repo_installed () {
     # Fetch the Google "repo" tool, which is used to manage dependent git repos.
-    # We'll avoid using 'which' for now, most probably it will be missing.
     if [ ! $(which repo 2> /dev/null) ]; then
         curl https://storage.googleapis.com/git-repo-downloads/repo > /usr/bin/repo
         chmod a+x /usr/bin/repo;

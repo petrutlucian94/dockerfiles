@@ -21,7 +21,6 @@ ENV SKIP_BUILD "0"
 # ENV CCACHE_DISABLE "1"
 
 # We'll leave the default build args here, making them easy to override.
-# ENV ANDROID_BUILD_ARGS="--verbose --mingw --min-build --no-tests"
 ENV ANDROID_BUILD_ARGS="--host=windows-x86_64,windows-x86 \
                         --no-tests --verbose"
 
