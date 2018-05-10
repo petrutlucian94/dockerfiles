@@ -55,7 +55,8 @@ function build_emulator () {
     ensure_ccache_dir
 
     pushd $AOSP_DIR/external/qemu
-    time ./android/rebuild.sh $ANDROID_BUILD_ARGS
+    # time ./android/rebuild.sh $ANDROID_BUILD_ARGS
+    time android/scripts/package-release.sh $ANDROID_BUILD_ARGS
     # TODO: We should package it.
     echo "Finished building Android Emulator. Destination: $AOSP_DIR/external/qemu/objs"
     popd
