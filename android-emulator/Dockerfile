@@ -2,7 +2,7 @@ FROM opensuse:42.3
 RUN zypper --gpg-auto-import-keys refresh
 
 ENV EXTRA_PACKAGES \
-    openssl binutils git make which curl \
+    tar openssl binutils git make which curl \
     python-xml python-pyOpenSSL \
     ccache
 #     texinfo gettext ccache python-yaml sparse
@@ -14,6 +14,7 @@ ENV LOCAL_DATA "/local_data"
 ENV AOSP_DIR "$DATA_DIR/aosp"
 ENV AOSP_BRANCH "emu-master-dev"
 ENV CCACHE_DIR "$DATA_DIR/ccache"
+ENV BUILD_LOG_DIR "/data/log"
 # ENV CCACHE_DISABLE "1"
 
 # We'll leave the default build args here, making them easy to override.
