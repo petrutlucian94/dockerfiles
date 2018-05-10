@@ -12,6 +12,7 @@ RUN zypper install -y $EXTRA_PACKAGES
 ENV DATA_DIR "/data"
 ENV LOCAL_DATA "/local_data"
 ENV AOSP_DIR "$DATA_DIR/aosp"
+ENV OUTPUT_PACKAGE_DIR "$DATA_DIR/packages"
 ENV AOSP_BRANCH "emu-master-dev"
 ENV CCACHE_DIR "$DATA_DIR/ccache"
 ENV BUILD_LOG_DIR "/data/log"
@@ -19,7 +20,8 @@ ENV BUILD_LOG_DIR "/data/log"
 
 # We'll leave the default build args here, making them easy to override.
 # ENV ANDROID_BUILD_ARGS="--verbose --mingw --min-build --no-tests"
-ENV ANDROID_BUILD_ARGS="--host=windows-x86_64,windows-x86 --no-tests --verbose"
+ENV ANDROID_BUILD_ARGS="--host=windows-x86_64,windows-x86 \
+                        --no-tests --verbose"
 
 LABEL description="Android Emulator MINGW build image. Use this image to cross-compile \
 Android Emulator for Windows. \

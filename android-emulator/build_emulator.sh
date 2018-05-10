@@ -46,7 +46,7 @@ set -e
 set -o xtrace
 
 REQUIRED_ENV_VARS=(AOSP_DIR AOSP_BRANCH \
-                   BUILD_LOG_DIR)
+                   BUILD_LOG_DIR OUTPUT_PACKAGE_DIR)
 for var in $REQUIRED_ENV_VARS; do
     MISSING_VARS=()
 
@@ -104,11 +104,18 @@ function build_emulator () {
 
     ensure_ccache_dir
 
+    PKG_DIR="$OUTPUT_PACKAGE_DIR/$BUILD_START_DATE"
+    BUILD_ARGS="$ANDROID_BUILD_ARGS --package-dir=$PKG_DIR"
+
+    mkdir -p $PKG_DIR
+
     pushd $AOSP_DIR/external/qemu
-    # time ./android/rebuild.sh $ANDROID_BUILD_ARGS
-    time android/scripts/package-release.sh $ANDROID_BUILD_ARGS
-    # TODO: We should package it.
+    time android/scripts/package-release.sh $BUILD_ARGS
+
     echo_summary "Finished building Android Emulator."
+
+    OUT_PACKAGES=$(find $PKG_DIR -type f)
+    echo_summary "Output packages: $OUT_PACKAGES"
     popd
 }
 
