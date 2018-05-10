@@ -24,7 +24,7 @@ function log_message () {
     echo -e "[$(date "+$TIMESTAMP_FORMAT")] $@"
 }
 
-function echo_summary () {
+function log_summary () {
     # Use this function to log certain build events, both to the
     # original stdout, as well as the log file.
     log_message "$@" >&3
@@ -36,10 +36,16 @@ function err_trap () {
     local r=$?
     set +o xtrace
 
-    log_message "${0##*/} failed: full log in $BUILD_LOG"
+    log_message "${0##*/} failed. Full log in $BUILD_LOG"
     tail -n 15 $BUILD_LOG >&3
 
     exit $r
+}
+
+function die () {
+    set +o xtrace
+    log_summary "$@ Full log in $BUILD_LOG"
+    exit 1
 }
 
 set -e
@@ -56,7 +62,7 @@ for var in $REQUIRED_ENV_VARS; do
 done
 
 if [ -z $MISSING_VARS ]; then
-    echo_summary "The following environment variables must be set: ${MISSING_VARS[@]}"
+    log_summary "The following environment variables must be set: ${MISSING_VARS[@]}"
     exit 1
 fi
 
@@ -70,7 +76,7 @@ function ensure_repo_installed () {
 }
 
 function sync_aosp_tree () {
-    echo_summary "Preparing AOSP tree."
+    log_summary "Preparing AOSP tree."
 
     if [ -d $AOSP_DIR ]; then
         echo "AOSP DIR already exists: $AOSP_DIR."
@@ -100,7 +106,7 @@ function ensure_ccache_dir () {
 }
 
 function build_emulator () {
-    echo_summary "Starting build."
+    log_summary "Starting build."
 
     ensure_ccache_dir
 
@@ -112,10 +118,13 @@ function build_emulator () {
     pushd $AOSP_DIR/external/qemu
     time android/scripts/package-release.sh $BUILD_ARGS
 
-    echo_summary "Finished building Android Emulator."
-
     OUT_PACKAGES=$(find $PKG_DIR -type f)
-    echo_summary "Output packages: $OUT_PACKAGES"
+    if [ -z $OUT_PACKAGES ]; then
+        die "Build failed."
+    fi
+
+    log_summary "Finished building Android Emulator."
+    log_summary "Output packages: $OUT_PACKAGES"
     popd
 }
 
