@@ -128,8 +128,17 @@ function build_emulator () {
     popd
 }
 
-sync_aosp_tree
-build_emulator
+if [ $SKIP_SYNC_AOSP == "1"]; then
+    log_summary "Skipped syncing AOSP tree."
+else
+    sync_aosp_tree
+fi
+
+if [ $SKIP_BUILD == "1" ]; then
+    log_summary "Skipped building the emulator."
+else
+    build_emulator
+fi
 
 set +e
 
