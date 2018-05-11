@@ -22,7 +22,7 @@ ENV SKIP_BUILD "0"
 
 # We'll leave the default build args here, making them easy to override.
 ENV ANDROID_BUILD_ARGS="--host=windows-x86_64,windows-x86 \
-                        --no-tests --verbose"
+                        --no-tests --verbosity=2"
 
 LABEL description="Android Emulator MINGW build image. Use this image to cross-compile \
 Android Emulator for Windows. \
