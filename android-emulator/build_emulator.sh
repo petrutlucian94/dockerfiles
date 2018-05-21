@@ -6,13 +6,10 @@ BUILD_START_DATE=$(date "+$TIMESTAMP_FORMAT")
 echo "Build started at $BUILD_START_DATE."
 
 # We'll limit the stdout output, using a file for the full log.
-BUILD_LOG_LNK="$BUILD_LOG_DIR/build.log"
-BUILD_LOG="$BUILD_LOG_DIR/build.$BUILD_START_DATE.log"
+BUILD_LOG="$BUILD_LOG_DIR/build.log"
 
 mkdir -p $BUILD_LOG_DIR
-ln -s -f $BUILD_LOG $BUILD_LOG_LNK
-
-echo "Full log location: $BUILD_LOG_LNK"
+echo "Full log location: $BUILD_LOG"
 
 # Save original fds.
 exec 3>&1
@@ -68,7 +65,11 @@ if [ -z $MISSING_VARS ]; then
     exit 1
 fi
 
-PKG_DIR="$OUTPUT_PACKAGE_DIR/$BUILD_START_DATE"
+# We'll try to use the same volume as much as possible.
+TMP_PKG_DIR="$OUTPUT_PACKAGE_DIR/ae_build_tmp"
+log_summary "Using temporary dir: $TMP_PKG_DIR"
+rm -rf $TMP_PKG_DIR
+mkdir -p $TMP_PKG_DIR
 
 function ensure_repo_installed () {
     # Fetch the Google "repo" tool, which is
@@ -119,18 +120,16 @@ function build_emulator () {
     # We'll explicitly set those values, using the defaults.
     PKG_PREFIX="android-emulator"
     PKG_REVISION=$(date +%Y%m%d)
-    EXPECTED_AE_PACKAGE="$PKG_DIR/$PKG_PREFIX-$PKG_REVISION-windows.tar.bz2"
+    EXPECTED_AE_PACKAGE="$TMP_PKG_DIR/$PKG_PREFIX-$PKG_REVISION-windows.tar.bz2"
 
-    BUILD_ARGS="$ANDROID_BUILD_ARGS --package-dir=$PKG_DIR"
+    BUILD_ARGS="$ANDROID_BUILD_ARGS --package-dir=$TMP_PKG_DIR"
     BUILD_ARGS="$BUILD_ARGS --package-prefix=$PKG_PREFIX"
     BUILD_ARGS="$BUILD_ARGS --revision=$PKG_REVISION"
-
-    mkdir -p $PKG_DIR
 
     pushd $AOSP_DIR/external/qemu
     time android/scripts/package-release.sh $BUILD_ARGS
 
-    OUT_PACKAGES=$(find $PKG_DIR -type f)
+    OUT_PACKAGES=$(find $TMP_PKG_DIR -type f)
     # We'll log all the resulted files, maybe the "package-release.sh script"
     # will change at some point.
     log_summary "Finished building Android Emulator."
@@ -141,9 +140,9 @@ function build_emulator () {
             "$EXPECTED_AE_PACKAGE."
     fi
 
-    AE_PACKAGE_LNK="$OUTPUT_PACKAGE_DIR/$EMULATOR_ARCHIVE_NAME"
-    ln -s -f $EXPECTED_AE_PACKAGE $AE_PACKAGE_LNK
-    log_summary "Android emulator archive symlink: $AE_PACKAGE_LNK"
+    AE_PACKAGE="$OUTPUT_PACKAGE_DIR/$EMULATOR_ARCHIVE_NAME"
+    mv $EXPECTED_AE_PACKAGE $AE_PACKAGE
+    log_summary "Android emulator archive: $AE_PACKAGE"
 
     popd
 }
@@ -151,7 +150,7 @@ function build_emulator () {
 function package_unitests () {
     log_summary "Packaging unit tests."
 
-    UNITTESTS_PACKAGE_ARCHIVE="$PKG_DIR/$UNITTESTS_ARCHIVE_NAME"
+    UNITTESTS_PACKAGE_ARCHIVE="$OUTPUT_PACKAGE_DIR/$UNITTESTS_ARCHIVE_NAME"
 
     pushd $AOSP_DIR/external/qemu/objs
     TMP_FILE_LIST=$(mktemp)
@@ -163,10 +162,8 @@ function package_unitests () {
 
     tar -czf $UNITTESTS_PACKAGE_ARCHIVE -T $TMP_FILE_LIST
 
-    UNITTESTS_LNK="$OUTPUT_PACKAGE_DIR/$UNITTESTS_ARCHIVE_NAME"
-    ln -s -f $UNITTESTS_PACKAGE_ARCHIVE $UNITTESTS_LNK
-    log_summary "Android Emulator unit tests archive" \
-                "symlink: $UNITTESTS_LNK"
+    log_summary "Android Emulator unit tests archive:" \
+                "$UNITTESTS_PACKAGE_ARCHIVE"
 
     rm -f "$TMP_FILE_LIST"
     popd
@@ -185,6 +182,7 @@ else
     package_unitests
 fi
 
+rm -rf $TMP_PKG_DIR
 set +e
 
 # Restore fds.
