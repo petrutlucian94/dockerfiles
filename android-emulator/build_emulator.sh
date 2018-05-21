@@ -48,7 +48,7 @@ function die () {
     exit 1
 }
 
-set -e
+set -eE
 set -o xtrace
 
 REQUIRED_ENV_VARS=(AOSP_DIR AOSP_BRANCH \
@@ -155,14 +155,15 @@ function package_unitests () {
 
     pushd $AOSP_DIR/external/qemu/objs
     TMP_FILE_LIST=$(mktemp)
-    find . -name "*unittests*" > $TMP_FILE_LIST
+    find . -name "*unittests*" | grep -v "/build" > $TMP_FILE_LIST
     # Those libs get explicity omitted when packaging the emulator,
     # while being required by some of the unit tests.
-    find . "*emugl_test_shared_library*" >> $TMP_FILE_LIST
+    find . -name "*emugl_test_shared_library*" | \
+        grep -v "/build" >> $TMP_FILE_LIST
 
-    tar -czf $$UNITTESTS_PACKAGE_ARCHIVE -T $TMP_FILE_LIST
+    tar -czf $UNITTESTS_PACKAGE_ARCHIVE -T $TMP_FILE_LIST
 
-    UNITTESTS_LNK="OUTPUT_PACKAGE_DIR/$UNITTESTS_ARCHIVE_NAME"
+    UNITTESTS_LNK="$OUTPUT_PACKAGE_DIR/$UNITTESTS_ARCHIVE_NAME"
     ln -s -f $UNITTESTS_PACKAGE_ARCHIVE $UNITTESTS_LNK
     log_summary "Android Emulator unit tests archive" \
                 "symlink: $UNITTESTS_LNK"
