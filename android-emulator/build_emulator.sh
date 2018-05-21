@@ -71,7 +71,7 @@ fi
 
 # We'll try to use the same volume as much as possible.
 TMP_PKG_DIR="$OUTPUT_PACKAGE_DIR/ae_build_tmp"
-log_summary "Using temporary dir: $TMP_PKG_DIR"
+log_message "Using temporary dir: $TMP_PKG_DIR"
 rm -rf $TMP_PKG_DIR
 mkdir -p $TMP_PKG_DIR
 
@@ -137,7 +137,7 @@ function build_emulator () {
     # We'll log all the resulted files, maybe the "package-release.sh script"
     # will change at some point.
     log_summary "Finished building Android Emulator."
-    log_summary "Output packages: $OUT_PACKAGES"
+    log_message "Output packages: $OUT_PACKAGES"
 
     if [ ! -f $EXPECTED_AE_PACKAGE ]; then
         die "Build failed. Could not find expected emulator package:" \
