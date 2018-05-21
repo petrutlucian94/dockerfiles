@@ -7,8 +7,11 @@ echo "Build started at $BUILD_START_DATE."
 
 # We'll limit the stdout output, using a file for the full log.
 BUILD_LOG="$BUILD_LOG_DIR/build.log"
+BUILD_SUMMARY_LOG="$BUILD_LOG_DIR/build_summary.log"
+
 
 mkdir -p $BUILD_LOG_DIR
+rm -f $BUILD_SUMMARY_LOG
 echo "Full log location: $BUILD_LOG"
 
 # Save original fds.
@@ -25,6 +28,7 @@ function log_summary () {
     # Use this function to log certain build events, both to the
     # original stdout, as well as the log file.
     log_message "$@" >&3
+    log_message "$@" >> $BUILD_SUMMARY_LOG
     log_message "$@"
 }
 
@@ -183,7 +187,6 @@ else
 fi
 
 rm -rf $TMP_PKG_DIR
-set +e
 
 # Restore fds.
 exec 1>&3
