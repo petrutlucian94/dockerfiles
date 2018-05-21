@@ -52,7 +52,8 @@ set -e
 set -o xtrace
 
 REQUIRED_ENV_VARS=(AOSP_DIR AOSP_BRANCH \
-                   BUILD_LOG_DIR OUTPUT_PACKAGE_DIR)
+                   BUILD_LOG_DIR OUTPUT_PACKAGE_DIR \
+                   UNITTESTS_ARCHIVE_NAME)
 for var in $REQUIRED_ENV_VARS; do
     MISSING_VARS=()
 
@@ -62,14 +63,19 @@ for var in $REQUIRED_ENV_VARS; do
 done
 
 if [ -z $MISSING_VARS ]; then
-    log_summary "The following environment variables must be set: ${MISSING_VARS[@]}"
+    log_summary "The following environment variables must " \
+                "be set: ${MISSING_VARS[@]}"
     exit 1
 fi
 
+PKG_DIR="$OUTPUT_PACKAGE_DIR/$BUILD_START_DATE"
+
 function ensure_repo_installed () {
-    # Fetch the Google "repo" tool, which is used to manage dependent git repos.
+    # Fetch the Google "repo" tool, which is
+    # used to manage dependent git repos.
     if [ ! $(which repo 2> /dev/null) ]; then
-        curl https://storage.googleapis.com/git-repo-downloads/repo > /usr/bin/repo
+        REPO_URL="https://storage.googleapis.com/git-repo-downloads/repo"
+        curl $REPO_URL > /usr/bin/repo
         chmod a+x /usr/bin/repo;
     fi
 }
@@ -109,8 +115,15 @@ function build_emulator () {
 
     ensure_ccache_dir
 
-    PKG_DIR="$OUTPUT_PACKAGE_DIR/$BUILD_START_DATE"
+    # Let's make it easier to identify the output package.
+    # We'll explicitly set those values, using the defaults.
+    PKG_PREFIX="android-emulator"
+    PKG_REVISION=$(date +%Y%m%d)
+    EXPECTED_AE_PACKAGE="$PKG_DIR/$PKG_PREFIX-$PKG_REVISION-windows.tar.bz2"
+
     BUILD_ARGS="$ANDROID_BUILD_ARGS --package-dir=$PKG_DIR"
+    BUILD_ARGS="$BUILD_ARGS --package-prefix=$PKG_PREFIX"
+    BUILD_ARGS="$BUILD_ARGS --revision=$PKG_REVISION"
 
     mkdir -p $PKG_DIR
 
@@ -118,12 +131,43 @@ function build_emulator () {
     time android/scripts/package-release.sh $BUILD_ARGS
 
     OUT_PACKAGES=$(find $PKG_DIR -type f)
-    if [ -z $OUT_PACKAGES ]; then
-        die "Build failed."
-    fi
-
+    # We'll log all the resulted files, maybe the "package-release.sh script"
+    # will change at some point.
     log_summary "Finished building Android Emulator."
     log_summary "Output packages: $OUT_PACKAGES"
+
+    if [ ! -f $EXPECTED_AE_PACKAGE ]; then
+        die "Build failed. Could not find expected emulator package:" \
+            "$EXPECTED_AE_PACKAGE."
+    fi
+
+    AE_PACKAGE_LNK="$OUTPUT_PACKAGE_DIR/$EMULATOR_ARCHIVE_NAME"
+    ln -s -f $EXPECTED_AE_PACKAGE $AE_PACKAGE_LNK
+    log_summary "Android emulator archive symlink: $AE_PACKAGE_LNK"
+
+    popd
+}
+
+function package_unitests () {
+    log_summary "Packaging unit tests."
+
+    UNITTESTS_PACKAGE_ARCHIVE="$PKG_DIR/$UNITTESTS_ARCHIVE_NAME"
+
+    pushd $AOSP_DIR/external/qemu/objs
+    TMP_FILE_LIST=$(mktemp)
+    find . -name "*unittests*" > $TMP_FILE_LIST
+    # Those libs get explicity omitted when packaging the emulator,
+    # while being required by some of the unit tests.
+    find . "*emugl_test_shared_library*" >> $TMP_FILE_LIST
+
+    tar -czf $$UNITTESTS_PACKAGE_ARCHIVE -T $TMP_FILE_LIST
+
+    UNITTESTS_LNK="OUTPUT_PACKAGE_DIR/$UNITTESTS_ARCHIVE_NAME"
+    ln -s -f $UNITTESTS_PACKAGE_ARCHIVE $UNITTESTS_LNK
+    log_summary "Android Emulator unit tests archive" \
+                "symlink: $UNITTESTS_LNK"
+
+    rm -f "$TMP_FILE_LIST"
     popd
 }
 
@@ -137,6 +181,7 @@ if [ $SKIP_BUILD == "1" ]; then
     log_summary "Skipped building the emulator."
 else
     build_emulator
+    package_unitests
 fi
 
 set +e

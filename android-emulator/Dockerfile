@@ -18,6 +18,8 @@ ENV CCACHE_DIR "$DATA_DIR/ccache"
 ENV BUILD_LOG_DIR "/data/log"
 ENV SKIP_SYNC_AOSP "0"
 ENV SKIP_BUILD "0"
+ENV UNITTESTS_ARCHIVE_NAME "emulator_unittests.tar.gz"
+ENV EMULATOR_ARCHIVE_NAME "android_emulator.tar.bz2"
 # ENV CCACHE_DISABLE "1"
 
 # We'll leave the default build args here, making them easy to override.
