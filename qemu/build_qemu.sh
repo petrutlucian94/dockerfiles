@@ -4,10 +4,10 @@ set -o xtrace
 REQUIRED_ENV_VARS=(QEMU_SRC_DIR BUILD_TOP_DIR QEMU_REPO_URL \
                    QEMU_BRANCH QEMU_TARGET_LIST MAKE_JOB_COUNT \
                    WHP_INCLUDE WHP_LIB MAKE_JOB_COUNT)
-for var in $REQUIRED_ENV_VARS; do
+for var in ${REQUIRED_ENV_VARS[@]}; do
     MISSING_VARS=()
 
-    if [ -z ${!a} ]; then
+    if [ -z ${!var} ]; then
         MISSING_VARS+=($var)
     fi
 done

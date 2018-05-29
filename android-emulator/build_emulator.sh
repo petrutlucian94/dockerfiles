@@ -55,10 +55,10 @@ set -o xtrace
 REQUIRED_ENV_VARS=(AOSP_DIR AOSP_BRANCH \
                    BUILD_LOG_DIR OUTPUT_PACKAGE_DIR \
                    UNITTESTS_ARCHIVE_NAME)
-for var in $REQUIRED_ENV_VARS; do
+for var in ${REQUIRED_ENV_VARS[@]}; do
     MISSING_VARS=()
 
-    if [ -z ${!a} ]; then
+    if [ -z ${!var} ]; then
         MISSING_VARS+=($var)
     fi
 done
