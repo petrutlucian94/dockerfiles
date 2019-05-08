@@ -30,6 +30,3 @@ RUN rustup component add clippy
 RUN choco install git -y
 
 RUN rmdir /s /q c:\TEMP
-
-ENTRYPOINT C:\BuildTools\VC\Auxiliary\Build\vcvarsall.bat x86_amd64 &&
-CMD ["powershell.exe", "-NoLogo", "-ExecutionPolicy", "Bypass"]
