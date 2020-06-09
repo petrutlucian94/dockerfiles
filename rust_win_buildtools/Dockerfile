@@ -1,9 +1,11 @@
 # escape=`
 
-ARG WIN_VER="ltsc2016"
-ARG RUST_TOOLCHAIN="1.39.0"
+ARG WIN_VER="ltsc2019"
 
 FROM mcr.microsoft.com/windows/servercore:$WIN_VER
+
+ENV chocolateyUseWindowsCompression "true"
+ENV RUST_TOOLCHAIN="1.39.0"
 
 ADD https://aka.ms/vs/16/release/vs_buildtools.exe C:\TEMP\vs_buildtools.exe
 ADD https://win.rustup.rs/x86_64 C:\TEMP\rustup-init.exe
@@ -23,7 +25,7 @@ RUN C:\TEMP\vs_buildtools.exe --quiet --wait --norestart --nocache `
  || IF "%ERRORLEVEL%"=="3010" EXIT 0
 
 RUN powershell C:\TEMP\choco-install.ps1
-RUN C:\TEMP\rustup-init.exe -y --default-toolchain "$RUST_TOOLCHAIN"
+RUN powershell C:\TEMP\rustup-init.exe -y --default-toolchain $env:RUST_TOOLCHAIN
 
 RUN rustup component add rustfmt
 RUN rustup component add clippy
